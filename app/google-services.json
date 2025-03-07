@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "884198567360",
+    "project_id": "memeforge-dbd73",
+    "storage_bucket": "memeforge-dbd73.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:884198567360:android:4e348ca269d0efb7742c25",
+        "android_client_info": {
+          "package_name": "com.example.memeforge"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5gvmS2HsoKfWsKhWgl_niwMcy99xKd-I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
