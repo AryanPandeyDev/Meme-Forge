@@ -1,10 +1,12 @@
 package com.example.memeforge.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -78,6 +82,10 @@ fun TemplateScreen(
     val name = authentication.firebaseAuth.currentUser?.displayName.toString().split(" ").firstOrNull() ?: "nigga"
     val email = authentication.firebaseAuth.currentUser?.email.toString()
 
+//    val image = ""
+//    val name = "kissa"
+//    val email = "kissa@gmai.com"
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = { DrawerContent(
@@ -120,7 +128,7 @@ private fun MainContent(
     onSearchActiveChange: (Boolean) -> Unit,
     onAccountClick: () -> Unit,
     image: String?,
-    name: String = "nigga"
+    name: String = "aryan"
 ) {
     Scaffold(
         modifier = Modifier
@@ -141,34 +149,87 @@ private fun MainContent(
                     onQueryChange = onQueryChange,
                     onActiveChange = onSearchActiveChange
                 )
-                TemplatesGrid()
+                TemplatesGrid(
+                    image = ""
+                )
             }
         }
     )
 }
 
 @Composable
-private fun TemplatesGrid() {
+private fun TemplatesGrid(image : String) {
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(150.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        columns = GridCells.Adaptive(140.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        contentPadding = PaddingValues(10.dp)
     ) {
         items(15) {
-            TemplateGridItem()
+            TemplateGridItem(
+                "https://picsum.photos/200/300",
+                memeName = "picture"
+            ){}
         }
     }
 }
-
 @Composable
-private fun TemplateGridItem() {
+fun TemplateGridItem(memeUrl: String, memeName: String, onClick: () -> Unit) {
+    var isLoading by remember { mutableStateOf(true) }
+
     Box(
         modifier = Modifier
-            .size(400.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .padding(20.dp)
-            .background(Color.Cyan)
-    )
+            .padding(8.dp) // Add padding around the item
+            .wrapContentSize() // Adjust size
+            .clip(RoundedCornerShape(16.dp)) // Rounded corners
+            .background(MaterialTheme.colorScheme.surfaceVariant) // Light background
+            .border(2.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)) // Nice border
+            .clickable { onClick() }
+    ) {
+        // Load meme image
+        AsyncImage(
+            model = memeUrl,
+            contentDescription = memeName,
+            error = painterResource(R.drawable.loadingerror),
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillWidth,
+            onLoading = { isLoading = true }, // Image is loading
+            onSuccess = { isLoading = false }, // Image loaded successfully
+            onError = { isLoading = false } // Hide loading on error
+        )
+
+        // Show a loading animation while the image loads
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Gray.copy(alpha = 0.3f)), // Light overlay
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground)
+            }
+        }
+
+        // Dark overlay for better text visibility
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.2f))
+        )
+
+        // Meme name text
+        Text(
+            text = memeName,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(8.dp)
+        )
+    }
 }
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -344,6 +405,6 @@ fun TopBar(
 @Composable
 fun TemplateScreenPreview() {
     MemeForgeTheme {
-       // TemplateScreen { }
+//        TemplateScreen { }
     }
 }

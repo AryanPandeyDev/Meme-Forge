@@ -44,6 +44,14 @@ android {
 }
 
 dependencies {
+    // ktor
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.android)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.client.logging)
+    implementation(libs.logback.classic)
+
     implementation(libs.compose.animation)
 
     implementation(libs.androidx.ui.text.google.fonts)
@@ -90,4 +98,6 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+
 }

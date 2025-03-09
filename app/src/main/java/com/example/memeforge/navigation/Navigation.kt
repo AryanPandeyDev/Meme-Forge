@@ -34,7 +34,9 @@ fun Navigation() {
             }
         }
         composable<Route.TemplateScreen> {
-            TemplateScreen(authentication){
+            TemplateScreen(
+                authentication
+            ){
                 navController.navigate(Route.LoginScreen)
                 navController.clearBackStack<Route.TemplateScreen>()
                 coroutineScope.launch {
