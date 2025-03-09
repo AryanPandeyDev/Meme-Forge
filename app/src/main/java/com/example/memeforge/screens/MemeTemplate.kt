@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
@@ -93,7 +94,7 @@ fun TemplateScreen(
             image,
             name = name,
             email = email
-        )},
+        ){coroutineScope.launch { drawerState.close() }}},
         content = {
             Surface(
                 modifier = Modifier.fillMaxSize(),
@@ -274,7 +275,8 @@ private fun DrawerContent(
     onSignOut: () -> Unit,
     image: String?,
     name: String,
-    email: String
+    email: String,
+    close : () -> Unit
 ) {
     ModalDrawerSheet {
         Column(
@@ -283,6 +285,15 @@ private fun DrawerContent(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Box(Modifier.fillMaxWidth()) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "exit",
+                    Modifier.align(Alignment.CenterEnd)
+                        .padding(end = 5.dp)
+                        .clickable { close() },
+                )
+            }
             UserProfileSection(
                 name, email,
                 image = image
