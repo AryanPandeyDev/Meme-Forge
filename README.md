@@ -82,14 +82,12 @@ API_KEY=your_gemini_api_key:
 
 ### 📸 Screenshots
 
-<em>(Add your screenshots here)</em><br>
+<em>![HomeScreen](https://github.com/user-attachments/assets/2d406281-a299-4955-b7db-108af6037830)        ![WelcomeScreen](https://github.com/user-attachments/assets/df35dd3b-b8b4-44e8-8521-2af49ccdcb3d) 
+![SignUpScreen](https://github.com/user-attachments/assets/f7172a9e-fd12-4103-9b00-bd3827bf57ba)    ![SlidingDrawerContents](https://github.com/user-attachments/assets/4ca648c6-23c0-4a27-9680-2bf3a973ad23)
+![EditMemeScreen](https://github.com/user-attachments/assets/81793dfa-1791-4e65-84df-f3c0f8ca6253)  ![AiCaptionGenerator](https://github.com/user-attachments/assets/60c49f19-9697-47fd-8219-ba729c465314)
+![FavouriteMemesScreen](https://github.com/user-attachments/assets/ab56190d-beac-4676-8706-b5f2df11d515)
+</em><br>
 
-🖼️ Welcome Screen  
-🔐 Login & Signup  
-🖼️ Meme Template Viewer  
-✏️ Meme Editor  
-❤️ Favorites  
-🤖 AI Caption Generator  
 
 ---
 
