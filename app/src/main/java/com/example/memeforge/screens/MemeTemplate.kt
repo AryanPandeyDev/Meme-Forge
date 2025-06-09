@@ -1,76 +1,93 @@
 package com.example.memeforge.screens
 
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContract
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DockedSearchBar
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SearchBarDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.rememberTopAppBarState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.example.memeforge.MainActivity
+import com.example.memeforge.network.memedata.MemeX
 import com.example.memeforge.R
-import com.example.memeforge.authentication.Authentication
+import com.example.memeforge.authentication.User
+import com.example.memeforge.data.StoredMeme
+import com.example.memeforge.network.MemeService
+import com.example.memeforge.network.implementation.MockMemeService
+import com.example.memeforge.requestNotificationPermission
 import com.example.memeforge.ui.theme.MemeForgeTheme
+import com.example.memeforge.viewmodels.TemplateViewModel
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+
+@SuppressLint("InlinedApi")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TemplateScreen(
-    authentication: Authentication,
-    onSignOut: () -> Unit
+    user: User,
+    onSignOut: () -> Unit,
+    sendImageFromDevice: (String) -> Unit,
+    navigateToFav: () -> Unit,
+    openMeme: (String, String) -> Unit
 ) {
+    val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -79,26 +96,63 @@ fun TemplateScreen(
     )
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
-    val image = authentication.firebaseAuth.currentUser?.photoUrl.toString()
-    val name = authentication.firebaseAuth.currentUser?.displayName.toString().split(" ").firstOrNull() ?: "nigga"
-    val email = authentication.firebaseAuth.currentUser?.email.toString()
+    val templateViewModel = hiltViewModel<TemplateViewModel>()
 
-//    val image = ""
-//    val name = "kissa"
-//    val email = "kissa@gmai.com"
+    val memes = templateViewModel.memes.collectAsState(emptyList())
+    val notificationsEnabled = templateViewModel.notificationEnabled.collectAsState(true)
+    val darkModeEnabled = templateViewModel.darkModeEnabled.collectAsState(true)
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        templateViewModel.toggleNotifications(isGranted)
+    }
+
+    LaunchedEffect(Unit) {
+        requestNotificationPermission(context,notificationPermissionLauncher) {
+            templateViewModel.toggleNotifications(it)
+        }
+    }
+
+
+
+    if (notificationsEnabled.value) {
+        FirebaseMessaging.getInstance().subscribeToTopic("all")
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d("FCM", "Subscribed to 'all' topic")
+                } else {
+                    Log.e("FCM", "Subscription failed", task.exception)
+                }
+            }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        drawerContent = { DrawerContent(
-            onSignOut = { onSignOut() },
-            image,
-            name = name,
-            email = email
-        ){coroutineScope.launch { drawerState.close() }}},
+        drawerContent = {
+            DrawerContent(
+                onSignOut = { onSignOut() },
+                image = user.image,
+                name = user.name,
+                email = user.email,
+                navigateToFav = navigateToFav,
+                close = { coroutineScope.launch { drawerState.close() } },
+                notificationsEnabled = notificationsEnabled.value,
+                onNotificationToggle = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        templateViewModel.toggleNotifications(!notificationsEnabled.value)
+                    }
+                },
+                darkModeEnabled = darkModeEnabled.value,
+                onDarkModeEnabled = {
+                    templateViewModel.toggleDarkMode(!darkModeEnabled.value)
+                }
+            )
+        },
         content = {
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.surface
+                color = MaterialTheme.colorScheme.background
             ) {
                 MainContent(
                     scrollBehavior = scrollBehavior,
@@ -111,8 +165,12 @@ fun TemplateScreen(
                             if (drawerState.isClosed) drawerState.open() else drawerState.close()
                         }
                     },
-                    image = image,
-                    name = name
+                    image = user.image,
+                    name = user.name,
+                    memes = if (!isSearchActive) memes.value else templateViewModel.search(searchQuery),
+                    templateViewModel = templateViewModel,
+                    openMeme = { url, name -> openMeme(url, name) },
+                    sendImageFromDevice = { sendImageFromDevice(it) }
                 )
             }
         }
@@ -129,11 +187,15 @@ private fun MainContent(
     onSearchActiveChange: (Boolean) -> Unit,
     onAccountClick: () -> Unit,
     image: String?,
-    name: String = "aryan"
+    name: String = "aryan",
+    memes: List<StoredMeme>?,
+    templateViewModel: TemplateViewModel,
+    sendImageFromDevice: (String) -> Unit,
+    openMeme: (String, String) -> Unit
 ) {
     Scaffold(
-        modifier = Modifier
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopBar(
                 scrollBehavior = scrollBehavior,
@@ -143,132 +205,444 @@ private fun MainContent(
             )
         },
         content = { paddingValues ->
-            Column(Modifier.padding(paddingValues)) {
-                SearchBar(
-                    query = searchQuery,
-                    isActive = isSearchActive,
-                    onQueryChange = onQueryChange,
-                    onActiveChange = onSearchActiveChange
-                )
-                TemplatesGrid(
-                    image = ""
+            Box(modifier = Modifier.fillMaxSize()
+                .padding(paddingValues)) {
+                Column {
+                    SearchBar(
+                        query = searchQuery,
+                        isActive = isSearchActive,
+                        onQueryChange = onQueryChange,
+                        onActiveChange = onSearchActiveChange
+                    )
+                    TemplatesGrid(
+                        memes,
+                        templateViewModel
+                    ) { url, name ->
+                        openMeme(url, name)
+                    }
+                }
+
+                ChooseFromStorageFAB(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(10.dp),
+                    sendImageFromDevice = { sendImageFromDevice(it) }
                 )
             }
         }
     )
 }
 
-@Composable
-private fun TemplatesGrid(image : String) {
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(140.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        contentPadding = PaddingValues(10.dp)
-    ) {
-        items(15) {
-            TemplateGridItem(
-                "https://picsum.photos/200/300",
-                memeName = "picture"
-            ){}
-        }
-    }
-}
-@Composable
-fun TemplateGridItem(memeUrl: String, memeName: String, onClick: () -> Unit) {
-    var isLoading by remember { mutableStateOf(true) }
-
-    Box(
-        modifier = Modifier
-            .padding(8.dp) // Add padding around the item
-            .wrapContentSize() // Adjust size
-            .clip(RoundedCornerShape(16.dp)) // Rounded corners
-            .background(MaterialTheme.colorScheme.surfaceVariant) // Light background
-            .border(2.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)) // Nice border
-            .clickable { onClick() }
-    ) {
-        // Load meme image
-        AsyncImage(
-            model = memeUrl,
-            contentDescription = memeName,
-            error = painterResource(R.drawable.loadingerror),
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.FillWidth,
-            onLoading = { isLoading = true }, // Image is loading
-            onSuccess = { isLoading = false }, // Image loaded successfully
-            onError = { isLoading = false } // Hide loading on error
-        )
-
-        // Show a loading animation while the image loads
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Gray.copy(alpha = 0.3f)), // Light overlay
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground)
-            }
-        }
-
-        // Dark overlay for better text visibility
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.2f))
-        )
-
-        // Meme name text
-        Text(
-            text = memeName,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(8.dp)
-        )
-    }
-}
-
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SearchBar(
+fun TemplatesGrid(
+    memes: List<StoredMeme>?,
+    memeViewModel: TemplateViewModel,
+    openMeme: (String, String) -> Unit
+) {
+    val pullToRefreshState = rememberPullToRefreshState()
+    val isLoading by memeViewModel.isLoading.collectAsState()
+    var showRequestTimedOut by remember { mutableStateOf(false) }
+    var refreshTrigger by remember { mutableStateOf(0) }
+
+    // Animation for loading state
+    val pulseAnimation by rememberInfiniteTransition(label = "pulse").animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = EaseInOut),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+
+    LaunchedEffect(memes) {
+        showRequestTimedOut = false
+    }
+
+    PullToRefreshBox(
+        state = pullToRefreshState,
+        isRefreshing = isLoading,
+        onRefresh = {
+            showRequestTimedOut = false
+            memeViewModel.updateMemes()
+            refreshTrigger++
+        }
+    ) {
+        when {
+            memes == null -> {
+                EmptyStateContent(
+                    icon = Icons.Outlined.SearchOff,
+                    title = "No Results Found",
+                    subtitle = "Try adjusting your search terms"
+                )
+            }
+
+            memes.isEmpty() -> {
+                LaunchedEffect(refreshTrigger) {
+                    delay(10_000)
+                    showRequestTimedOut = true
+                    memeViewModel.setLoadingFalse()
+                }
+
+                if (!showRequestTimedOut) {
+                    LoadingStateContent(pulseAnimation)
+                } else {
+                    ErrorStateContent {
+                        showRequestTimedOut = false
+                        memeViewModel.updateMemes()
+                        refreshTrigger++
+                    }
+                }
+            }
+
+            else -> {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(150.dp),
+                    contentPadding = PaddingValues(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(memes) { meme ->
+                        TemplateGridItem(
+                            memeUrl = meme.url,
+                            memeName = meme.name,
+                            onClick = { openMeme(meme.url, meme.name) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyStateContent(
+    icon: ImageVector,
+    title: String,
+    subtitle: String
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun LoadingStateContent(pulseAnimation: Float) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier
+                .size(48.dp)
+                .alpha(pulseAnimation),
+            color = MaterialTheme.colorScheme.primary,
+            strokeWidth = 3.dp
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "Loading Templates...",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = pulseAnimation)
+        )
+    }
+}
+
+@Composable
+private fun ErrorStateContent(onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.WifiOff,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Connection Timeout",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Please check your internet connection",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        OutlinedButton(
+            onClick = onRetry,
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Retry")
+        }
+    }
+}
+
+@Composable
+fun TemplateGridItem(
+    memeUrl: String,
+    memeName: String,
+    onClick: () -> Unit
+) {
+    var isLoading by remember { mutableStateOf(true) }
+    var isError by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isLoading) 0.95f else 1f,
+        animationSpec = tween(300),
+        label = "scale"
+    )
+
+    Card(
+        modifier = Modifier
+            .aspectRatio(1f)
+            .scale(scale)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 8.dp
+        )
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            AsyncImage(
+                model = memeUrl,
+                contentDescription = memeName,
+                error = painterResource(R.drawable.loadingerror),
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                onLoading = {
+                    isLoading = true
+                    isError = false
+                },
+                onSuccess = {
+                    isLoading = false
+                    isError = false
+                },
+                onError = {
+                    isLoading = false
+                    isError = true
+                }
+            )
+
+            // Loading overlay
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 2.dp
+                    )
+                }
+            }
+
+            // Text overlay
+            if (!isLoading && !isError) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.7f)
+                                ),
+                                startY = 0.6f
+                            )
+                        )
+                )
+
+                Text(
+                    text = memeName,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(12.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White,
+                    maxLines = 2
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ChooseFromStorageFAB(
+    modifier: Modifier,
+    sendImageFromDevice: (String) -> Unit
+) {
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            selectedImageUri = uri
+            uri?.let { sendImageFromDevice(it.toString()) }
+        }
+    )
+
+    ExtendedFloatingActionButton(
+        onClick = {
+            photoPickerLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        },
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        elevation = FloatingActionButtonDefaults.elevation(
+            defaultElevation = 6.dp,
+            pressedElevation = 12.dp
+        ),
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Image,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+        },
+        text = {
+            Text(
+                text = "Pick from Storage",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    )
+}
+
+@Composable
+fun SearchBar(
     query: String,
     isActive: Boolean,
     onQueryChange: (String) -> Unit,
     onActiveChange: (Boolean) -> Unit
 ) {
-    DockedSearchBar(
-        query = query,
-        onQueryChange = onQueryChange,
-        onSearch = { onActiveChange(false) },
-        active = isActive,
-        onActiveChange = onActiveChange,
-        modifier = Modifier
-            .padding(vertical = 20.dp)
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        colors = SearchBarDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
-        ),
-        placeholder = { Text("Search templates...") },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    TextField(
+        value = query,
+        onValueChange = onQueryChange,
+        placeholder = {
+            Text(
+                "Search templates...",
+                style = MaterialTheme.typography.labelLarge
+            )
+        },
+        leadingIcon = {
+            Icon(
+                Icons.Default.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        },
         trailingIcon = {
             if (isActive) {
                 Icon(
-                    Icons.Default.Close,
-                    contentDescription = null,
-                    modifier = Modifier.clickable {
-                        onQueryChange("")
-                        onActiveChange(false)
-                    }
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close search",
+                    modifier = Modifier
+                        .clickable {
+                            onQueryChange("")
+                            onActiveChange(false)
+                            focusManager.clearFocus() // hides caret
+                        }
+                        .padding(4.dp),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
-        }
-    ) {}
+        },
+        colors = TextFieldDefaults.colors(
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+            cursorColor = MaterialTheme.colorScheme.primary,
+            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent
+        ),
+        shape = RoundedCornerShape(12.dp),
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(
+            imeAction = ImeAction.Search
+        ),
+        keyboardActions = KeyboardActions(
+            onSearch = {
+                focusManager.clearFocus()
+                onActiveChange(false)
+            }
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .focusRequester(focusRequester)
+            .onFocusChanged { focusState ->
+                onActiveChange(focusState.isFocused)
+            }
+    )
 }
+
 
 @Composable
 private fun DrawerContent(
@@ -276,55 +650,175 @@ private fun DrawerContent(
     image: String?,
     name: String,
     email: String,
-    close : () -> Unit
+    navigateToFav: () -> Unit,
+    close: () -> Unit,
+    notificationsEnabled: Boolean,
+    onNotificationToggle: (Boolean) -> Unit,
+    darkModeEnabled: Boolean,
+    onDarkModeEnabled: (Boolean) -> Unit
 ) {
-    ModalDrawerSheet {
+    ModalDrawerSheet(
+        drawerContainerColor = MaterialTheme.colorScheme.surface,
+        drawerContentColor = MaterialTheme.colorScheme.onSurface
+    ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxSize()
+                .padding(20.dp)
         ) {
-            Box(Modifier.fillMaxWidth()) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "exit",
-                    Modifier.align(Alignment.CenterEnd)
-                        .padding(end = 5.dp)
-                        .clickable { close() },
-                )
-            }
-            UserProfileSection(
-                name, email,
-                image = image
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-            // Additional drawer items can be added here
-            Spacer(Modifier.weight(1f))  // Pushes content to bottom
-
-            // Sign Out Button
+            // Header with close button
             Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                IconButton(onClick = close) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Close drawer",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            // Profile Section
+            UserProfileSection(name = name, email = email, image = image)
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 24.dp),
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+            )
+
+            // Navigation Items
+            DrawerMenuItem(
+                icon = Icons.Outlined.Favorite,
+                title = "Favourites",
+                onClick = navigateToFav
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Settings Section
+            Text(
+                text = "Settings",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+
+            SettingsItem(
+                title = "Notifications",
+                isEnabled = notificationsEnabled,
+                onToggle = onNotificationToggle
+            )
+
+            SettingsItem(
+                title = "Dark Mode",
+                isEnabled = darkModeEnabled,
+                onToggle = onDarkModeEnabled
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Enhanced Sign Out Button
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onSignOut)
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
+                    .clickable { onSignOut() },
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                    contentDescription = "Sign Out",
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(Modifier.width(16.dp))
-                Text(
-                    text = "Sign Out",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Sign Out",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun DrawerMenuItem(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit,
+    isDestructive: Boolean = false
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = if (isDestructive)
+                MaterialTheme.colorScheme.error
+            else
+                MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineMedium,
+            color = if (isDestructive)
+                MaterialTheme.colorScheme.error
+            else
+                MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun SettingsItem(
+    title: String,
+    isEnabled: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Switch(
+            checked = isEnabled,
+            onCheckedChange = onToggle,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                uncheckedTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+            )
+        )
     }
 }
 
@@ -332,37 +826,42 @@ private fun DrawerContent(
 private fun UserProfileSection(
     name: String,
     email: String,
-    image : String?
+    image: String?
 ) {
     Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(15.dp)
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = image ?: R.drawable.fallbackaccounticon ,
+            model = image ?: painterResource(R.drawable.fallbackaccounticon),
             contentDescription = "User Profile",
             modifier = Modifier
-                .size(65.dp)
-                .clip(RoundedCornerShape(100)) ,
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+            error = painterResource(R.drawable.fallbackaccounticon),
+            contentScale = ContentScale.Crop
         )
-        Column(verticalArrangement = Arrangement.SpaceBetween) {
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp),
-                fontSize = 30.sp
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = email,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -373,49 +872,56 @@ fun TopBar(
     name: String
 ) {
     TopAppBar(
-        modifier = Modifier.padding(top = 10.dp),
         title = {
-            Column {
+            Column(modifier = Modifier.padding(start = 4.dp)) {
                 Text(
-                    "Hello $name,",
-                    fontSize = 32.sp,
+                    text = "Hello, $name",
+                    style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 10.dp),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.titleLarge
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    "Choose a template of your choice",
-                    modifier = Modifier.padding(start = 10.dp),
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onBackground
+                    text = "Choose your perfect template",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Transparent
-        ),
-        scrollBehavior = scrollBehavior,
         actions = {
             AsyncImage(
                 model = image,
                 error = painterResource(R.drawable.fallbackaccounticon),
-                contentDescription = null,
+                contentDescription = "Profile",
                 modifier = Modifier
-                    .size(65.dp)
-                    .padding(8.dp)
-                    .clip(RoundedCornerShape(100))
-                    .clickable(onClick = onAccountClick),
-                contentScale = ContentScale.FillBounds
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onAccountClick)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                contentScale = ContentScale.Crop
             )
-        }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.background
+        ),
+        scrollBehavior = scrollBehavior
     )
 }
 
 @Preview(showSystemUi = true)
 @Composable
 fun TemplateScreenPreview() {
-    MemeForgeTheme {
-//        TemplateScreen { }
+    val user = User(
+        image = null,
+        name = "John Doe",
+        email = "mockuser@example.com"
+    )
+    MemeForgeTheme(true) {
+        TemplateScreen(
+            user = user,
+            onSignOut = {},
+            navigateToFav = {},
+            openMeme = { _, _ -> },
+            sendImageFromDevice = {}
+        )
     }
 }

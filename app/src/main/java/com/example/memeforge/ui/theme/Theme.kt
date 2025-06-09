@@ -1,7 +1,6 @@
 package com.example.memeforge.ui.theme
 
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -10,8 +9,11 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.example.memeforge.utils.WindowSizeClass
+import com.example.memeforge.utils.getWindowSizeClass
 
-private val DarkColorScheme = darkColorScheme(
+
+val DarkColorScheme = darkColorScheme(
     primary = Primary,
     onPrimary = Color.White,
     background = DarkBackground,
@@ -23,7 +25,7 @@ private val DarkColorScheme = darkColorScheme(
     outline = DarkDivider
 )
 
-private val LightColorScheme = lightColorScheme(
+val LightColorScheme = lightColorScheme(
     primary = Primary,
     onPrimary = Color.White,
     background = Background,
@@ -35,9 +37,10 @@ private val LightColorScheme = lightColorScheme(
     outline = Divider
 )
 
+
 @Composable
 fun MemeForgeTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -50,9 +53,18 @@ fun MemeForgeTheme(
         else -> LightColorScheme
     }
 
+    val sizeClass = getWindowSizeClass()
+    val dynamicTypography = when (sizeClass) {
+        WindowSizeClass.COMPACT_SMALL -> getCompactSmallTypography()
+        WindowSizeClass.COMPACT_MEDIUM -> getCompactMediumTypography()
+        WindowSizeClass.COMPACT -> getCompactTypography()
+        WindowSizeClass.MEDIUM -> getMediumTypography()
+        WindowSizeClass.LARGE -> getLargeTypography()
+    }
+
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = dynamicTypography,
         content = content
     )
 }

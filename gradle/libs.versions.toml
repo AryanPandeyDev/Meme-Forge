@@ -1,8 +1,12 @@
 [versions]
+accompanistSwiperefresh = "0.33.2-alpha"
 agp = "8.7.3"
 coilCompose = "2.6.0"
 credentials = "1.3.0"
+datastorePreferences = "1.1.7"
 firebaseBom = "33.9.0"
+firebaseMessaging = "24.1.1"
+generativeai = "0.9.0"
 googleid = "1.1.1"
 hiltAndroid = "2.51"
 hiltCompiler = "2.51"
@@ -14,26 +18,41 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.10.0"
-composeBom = "2024.04.01"
+composeBom = "2025.05.01"
 lifecycleViewmodelCompose = "2.8.7"
+logbackAndroid = "3.0.0"
 logbackClassic = "1.4.11"
+materialIconsExtended = "1.7.8"
 roomRuntime = "2.6.1"
 uiTextGoogleFonts = "1.7.8"
 navigationCompose = "2.8.8"
 kotlinxSerializationJson = "1.6.3"
-composeAnimation = "1.6.0"
+composeAnimation = "1.8.2"
 ktorClientAndroid = "2.3.7"
 ktorClientContentNegotiation = "2.3.7"
 ktorClientCore = "2.3.7"
 ktorClientLogging = "2.3.7"
 ktorSerializationKotlinxJson = "2.3.7"
+slf4j = "2.0.7"
+media3Exoplayer = "1.5.1"
+foundationAndroid = "1.7.2"
+firebaseStorage = "21.0.1"
+material3 = "1.4.0-alpha14"
 
 [libraries]
+accompanist-swiperefresh = { module = "com.google.accompanist:accompanist-swiperefresh", version.ref = "accompanistSwiperefresh" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
+androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
+androidx-ui-text = { module = "androidx.compose.ui:ui-text", version.ref = "uiTextGoogleFonts" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebaseMessaging" }
+generativeai = { module = "com.google.ai.client.generativeai:generativeai", version.ref = "generativeai" }
 ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktorClientAndroid" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktorClientContentNegotiation" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktorClientCore" }
 ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktorClientLogging" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktorSerializationKotlinxJson" }
+logback-android = { module = "com.github.tony19:logback-android", version.ref = "logbackAndroid" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 
 compose-animation = { module = "androidx.compose.animation:animation", version.ref = "composeAnimation" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
@@ -66,8 +85,12 @@ androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
-androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
-logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logbackClassic" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3" , version.ref = "material3" }
+androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3Exoplayer" }
+androidx-foundation-android = { group = "androidx.compose.foundation", name = "foundation-android", version.ref = "foundationAndroid" }
+firebase-storage = { group = "com.google.firebase", name = "firebase-storage", version.ref = "firebaseStorage" }
+ui-graphics = { module = "androidx.compose.ui:ui-graphics", version.ref = "uiTextGoogleFonts" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

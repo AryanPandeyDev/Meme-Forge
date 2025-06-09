@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -12,14 +14,23 @@ android {
     namespace = "com.example.memeforge"
     compileSdk = 35
 
+    val localProperties = Properties()
+    val localPropertiesFile = File(rootDir,"secret.properties")
+
+    if (localPropertiesFile.exists() && localPropertiesFile.isFile) {
+        localPropertiesFile.inputStream().use {
+            localProperties.load(it)
+        }
+    }
+
     defaultConfig {
         applicationId = "com.example.memeforge"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String","API_KEY",localProperties.getProperty("API_KEY"))
     }
 
     buildTypes {
@@ -40,6 +51,8 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+        resValues = true
     }
     packaging {
         resources {
@@ -49,13 +62,35 @@ android {
 }
 
 dependencies {
+
+    implementation("androidx.compose.material3:material3-window-size-class:1.3.2")
+
+    //datastore
+    implementation(libs.androidx.datastore.preferences)
+
+    implementation(libs.compose.animation)
+
+    //fcm
+    implementation(libs.firebase.messaging)
+
+    //Swipe To Refresh
+    implementation(libs.accompanist.swiperefresh)
+
+    //gemini
+    implementation(libs.generativeai)
+
+    implementation(libs.androidx.ui.text)
+    implementation(libs.ui.graphics)
+
+
     // ktor
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.android)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.client.logging)
-    implementation(libs.logback.classic)
+    implementation(libs.logback.android)
+    implementation(libs.slf4j.api)
 
     implementation(libs.compose.animation)
 
@@ -74,8 +109,13 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.foundation.android)
+    implementation(libs.firebase.storage)
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
+
+    implementation(libs.androidx.material.icons.extended)
 
 
     // Dagger-Hilt
