@@ -6,6 +6,8 @@
 [![Room DB](https://img.shields.io/badge/Room-Offline-green?logo=sqlite)](https://developer.android.com/training/data-storage/room)
 [![Gemini AI](https://img.shields.io/badge/Gemini-AI-blue?logo=google)](https://ai.google.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+![GitHub all releases](https://img.shields.io/github/downloads/AryanPandeyDev/Meme-Forge/total)
+
 
 ---
 
