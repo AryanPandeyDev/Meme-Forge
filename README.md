@@ -51,7 +51,7 @@ MemeForge is a powerful and intelligent meme generator app for Android, designed
 - <strong>Image Loading</strong>: Coil  
 - <strong>AI Integration</strong>: Google Gemini API  
 - <strong>DI</strong>: Dagger-Hilt  
-- <strong>Other</strong>: DataStore, Swipe Refresh, ExoPlayer (Media3)  
+- <strong>Other</strong>: DataStore, Swipe Refresh
 
 ---
 
